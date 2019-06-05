@@ -6,6 +6,7 @@ package App::AlgorithmBackoffUtils;
 use 5.010001;
 use strict 'subs', 'vars';
 use warnings;
+use Log::ger;
 
 use Algorithm::Backoff::Constant ();
 use Algorithm::Backoff::Exponential ();
@@ -39,7 +40,7 @@ By default, only exit code 0 means success.
 
 _
     },
-    no_delay => {
+    skip_delay => {
         summary => 'Do not delay at all',
         schema => 'true*',
         description => <<'_',
@@ -66,7 +67,7 @@ sub _retry {
     my $command    = delete $args->{command};
     my $retry_on   = delete $args->{retry_on};
     my $success_on = delete $args->{success_on};
-    my $no_delay   = delete $args->{no_delay};
+    my $skip_delay = delete $args->{skip_delay};
 
     my $time = time();
     my $ab = $mod->new(%$args);
@@ -97,21 +98,23 @@ sub _retry {
         }
         if ($is_success) {
             log_trace "Command successful (exit_code=$exit_code)";
+            return [200];
         } else {
             my $delay;
-            if ($no_delay) {
+            if ($skip_delay) {
                 $delay = $ab->failure($time);
             } else {
                 $delay = $ab->failure;
             }
             if ($delay == -1) {
                 log_error "Command failed (exit_code=$exit_code), giving up";
+                return [500, "Command failed (after $attempt attempt(s))"];
             } else {
                 log_warn "Command failed (exit_code=$exit_code), delaying %d second(s) before the next attempt ...",
                     $delay;
-                sleep $delay unless $no_delay;
+                sleep $delay unless $skip_delay;
             }
-            $time += $delay if $no_delay;
+            $time += $delay if $skip_delay;
         }
     }
 }
@@ -131,7 +134,7 @@ $SPEC{retry_constant} = {
     ],
 };
 sub retry_constant {
-    _retry("Constant", \%{@_});
+    _retry("Constant", {@_});
 }
 
 $SPEC{retry_exponential} = {
@@ -149,7 +152,7 @@ $SPEC{retry_exponential} = {
     ],
 };
 sub retry_exponential {
-    _retry("Exponential", \%{@_});
+    _retry("Exponential", {@_});
 }
 
 $SPEC{retry_fibonacci} = {
@@ -167,7 +170,7 @@ $SPEC{retry_fibonacci} = {
     ],
 };
 sub retry_fibonacci {
-    _retry("Fibonacci", \%{@_});
+    _retry("Fibonacci", {@_});
 }
 
 1;
@@ -180,6 +183,8 @@ This distributions provides the following command-line utilities:
 # INSERT_EXECS_LIST
 
 
-=head1 SEE ALSO
+=head1 append:SEE ALSO
+
+L<Algorithm::Backoff>
 
 =cut
