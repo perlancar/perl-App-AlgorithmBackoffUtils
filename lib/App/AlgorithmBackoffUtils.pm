@@ -13,7 +13,35 @@ use Algorithm::Backoff::Exponential ();
 use Algorithm::Backoff::Fibonacci ();
 use Time::HiRes qw(time sleep);
 
+my @algos = qw(Constant Exponential Fibonacci);
 our %SPEC;
+
+our %arg_algorithm = (
+    algorithm => {
+        summary => 'Backoff algorithm',
+        schema => ['str*', in=>\@algos],
+        req => 1,
+        cmdline_aliases => {a=>{}},
+    },
+);
+
+our %args_algo_attrs;
+for my $algo (@algos) {
+    my $args = ${"Algorithm::Backoff::$algo\::SPEC"}{new}{args};
+    for my $arg (keys %$args) {
+        my $argspec = { %{$args->{$arg}} };
+        $argspec->{req} = 0;
+        delete $argspec->{pos};
+        if ($argspec->{tags} &&
+                (grep { $_ eq 'common' || $_ eq 'category:common-to-all-algorithms' } @{ $argspec->{tags} })) {
+            $argspec->{tags}[0] = 'category:common-to-all-algorithms';
+        } else {
+            $argspec->{tags} //= [];
+            push @{ $argspec->{tags} }, lc "category:$algo-algorithm";
+        }
+        $args_algo_attrs{$arg} //= $argspec;
+    }
+}
 
 our %args_retry_common = (
     command => {
@@ -119,6 +147,28 @@ sub _retry {
     }
 }
 
+$SPEC{retry} = {
+    v => 1.1,
+    summary => 'Retry a command with custom backoff algorithm',
+    args => {
+        %arg_algorithm,
+        %args_retry_common,
+        %args_algo_attrs,
+    },
+    features => {
+        dry_run => 1,
+    },
+    links => [
+        {url => 'pm:Algorithm::Backoff::Constant'},
+    ],
+};
+sub retry {
+    my %args = @_;
+
+    my $algo = delete $args{algorithm};
+    _retry($algo, \%args);
+}
+
 $SPEC{retry_constant} = {
     v => 1.1,
     summary => 'Retry a command with constant delay backoff',
@@ -171,6 +221,83 @@ $SPEC{retry_fibonacci} = {
 };
 sub retry_fibonacci {
     _retry("Fibonacci", {@_});
+}
+
+$SPEC{show_backoff_delays} = {
+    v => 1.1,
+    summary => 'Show backoff delays',
+    args => {
+        %arg_algorithm,
+        %args_algo_attrs,
+        logs => {
+            summary => 'List of failures or successes',
+            schema => ['array*', of=>'str*', 'x.perl.coerce_rules'=>['str_comma_sep']],
+            'x.name.is_plural' => 1,
+            'x.name.singular' => 'log',
+            req => 1,
+            pos => 0,
+            slurpy => 1,
+            description => <<'_',
+
+A list of 0's (to signify failure) or 1's (to signify success). Each
+failure/success can be followed by `:TIMESTAMP` (unix epoch) or `:+SECS` (number
+of seconds after the previous log), or the current timestamp will be assumed.
+Examples:
+
+    0 0 0 0 0 0 0 0 0 0 1 1 1 1 1
+
+(10 failures followed by 5 successes).
+
+    0 0:+2 0:+4 0:+6 1
+
+(4 failures, 2 seconds apart, followed by immediate success.)
+
+_
+        },
+    },
+    features => {
+        dry_run => 1,
+    },
+    links => [
+        {url => 'pm:Algorithm::Backoff::Fibonacci'},
+    ],
+};
+sub show_backoff_delays {
+    my %args = @_;
+
+    my $algo = $args{algorithm} or return [400, "Please specify algorithm"];
+    my $algo_args = ${"Algorithm::Backoff::$algo\::SPEC"}{new}{args};
+
+    my %algo_attrs;
+    for my $arg (keys %args_algo_attrs) {
+        if (exists $args{$arg}) {
+            $algo_attrs{$arg} = $args{$arg};
+        }
+    }
+    my $ab = "Algorithm::Backoff::$algo"->new(%algo_attrs);
+
+    my @delays;
+    my $time = time();
+    my $i = 0;
+    for my $log (@{ $args{logs} }) {
+        $i++;
+        $log =~ /\A([01])(?::(\+)?(\d+))?\z/ or
+            return [400, "Invalid log#$i syntax '$log', must be 0 or 1 followed by :TIMESTAMP or :+SECS"];
+        if ($2) {
+            $time += $3;
+        } elsif (defined $3) {
+            $time = $3;
+        }
+        my $delay;
+        if ($1) {
+            $delay = $ab->success($time);
+        } else {
+            $delay = $ab->failure($time);
+        }
+        push @delays, $delay;
+    }
+
+    [200, "OK", \@delays];
 }
 
 1;
