@@ -11,9 +11,13 @@ use Log::ger;
 use Algorithm::Backoff::Constant ();
 use Algorithm::Backoff::Exponential ();
 use Algorithm::Backoff::Fibonacci ();
+use Algorithm::Backoff::LILD ();
+use Algorithm::Backoff::LIMD ();
+use Algorithm::Backoff::MILD ();
+use Algorithm::Backoff::MIMD ();
 use Time::HiRes qw(time sleep);
 
-my @algos = qw(Constant Exponential Fibonacci);
+my @algos = qw(Constant Exponential Fibonacci LILD LIMD MILD MIMD);
 our %SPEC;
 
 our %arg_algorithm = (
@@ -221,6 +225,78 @@ $SPEC{retry_fibonacci} = {
 };
 sub retry_fibonacci {
     _retry("Fibonacci", {@_});
+}
+
+$SPEC{retry_lild} = {
+    v => 1.1,
+    summary => 'Retry a command with LILD (linear increase, linear decrease) backoff',
+    args => {
+        %args_retry_common,
+        %{ $Algorithm::Backoff::LILD::SPEC{new}{args} },
+    },
+    features => {
+        dry_run => 1,
+    },
+    links => [
+        {url => 'pm:Algorithm::Backoff::LILD'},
+    ],
+};
+sub retry_lild {
+    _retry("LILD", {@_});
+}
+
+$SPEC{retry_limd} = {
+    v => 1.1,
+    summary => 'Retry a command with LIMD (linear increase, multiplicative decrease) backoff',
+    args => {
+        %args_retry_common,
+        %{ $Algorithm::Backoff::LIMD::SPEC{new}{args} },
+    },
+    features => {
+        dry_run => 1,
+    },
+    links => [
+        {url => 'pm:Algorithm::Backoff::LIMD'},
+    ],
+};
+sub retry_limd {
+    _retry("LIMD", {@_});
+}
+
+$SPEC{retry_mild} = {
+    v => 1.1,
+    summary => 'Retry a command with MILD (multiplicative increase, linear decrease) backoff',
+    args => {
+        %args_retry_common,
+        %{ $Algorithm::Backoff::MILD::SPEC{new}{args} },
+    },
+    features => {
+        dry_run => 1,
+    },
+    links => [
+        {url => 'pm:Algorithm::Backoff::MILD'},
+    ],
+};
+sub retry_mild {
+    _retry("MILD", {@_});
+}
+
+$SPEC{retry_mimd} = {
+    v => 1.1,
+    summary => 'Retry a command with MIMD (multiplicative increase, multiplicative decrease) backoff',
+    args => {
+        %args_retry_common,
+        %{ $Algorithm::Backoff::MIMD::SPEC{new}{args} },
+    },
+    features => {
+        dry_run => 1,
+    },
+    links => [
+        {url => 'pm:Algorithm::Backoff::MIMD'},
+    ],
+};
+sub retry_mimd {
+    _retry("MIMD", {@_});
 }
 
 $SPEC{show_backoff_delays} = {
