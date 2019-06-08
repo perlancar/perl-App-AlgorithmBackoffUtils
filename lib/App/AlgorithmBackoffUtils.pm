@@ -270,10 +270,16 @@ sub show_backoff_delays {
 
     my %algo_attrs;
     for my $arg (keys %args_algo_attrs) {
+        my $argspec = $args_algo_attrs{$arg};
+        next unless grep {
+            $_ eq 'category:common-to-all-algorithms' ||
+            $_ eq lc("category:$algo-algorithm")
+        } @{ $argspec->{tags} };
         if (exists $args{$arg}) {
             $algo_attrs{$arg} = $args{$arg};
         }
     }
+    #use DD; dd \%algo_attrs;
     my $ab = "Algorithm::Backoff::$algo"->new(%algo_attrs);
 
     my @delays;
