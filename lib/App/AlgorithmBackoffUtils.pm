@@ -33,7 +33,7 @@ our %args_algo_attrs;
 for my $algo (@algos) {
     my $args = ${"Algorithm::Backoff::$algo\::SPEC"}{new}{args};
     for my $arg (keys %$args) {
-        my $argspec = { %{$args->{$arg}} };
+        my $argspec = $args_algo_attrs{$arg} // { %{$args->{$arg}} };
         $argspec->{req} = 0;
         delete $argspec->{pos};
         if ($argspec->{tags} &&
