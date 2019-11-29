@@ -1,6 +1,8 @@
 package App::AlgorithmBackoffUtils;
 
+# AUTHOR
 # DATE
+# DIST
 # VERSION
 
 use 5.010001;
@@ -307,7 +309,7 @@ $SPEC{show_backoff_delays} = {
         %args_algo_attrs,
         logs => {
             summary => 'List of failures or successes',
-            schema => ['array*', of=>'str*', 'x.perl.coerce_rules'=>['str_comma_sep']],
+            schema => ['array*', of=>'str*', 'x.perl.coerce_rules'=>['From_str::comma_sep']],
             'x.name.is_plural' => 1,
             'x.name.singular' => 'log',
             req => 1,
