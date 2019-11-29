@@ -1,3 +1,9 @@
+0.004   2019-11-29  Released-By: PERLANCAR; Urgency: medium
+
+	- Update coerce rule names in Sah schemas (Data::Sah::Coerce
+	  0.034+).
+
+
 0.003   2019-06-08  Released-By: PERLANCAR
 
         - Add utilities: retry-{lild,limd,mild,mimd}.
