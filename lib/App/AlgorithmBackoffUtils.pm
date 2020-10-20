@@ -1,6 +1,6 @@
 package App::AlgorithmBackoffUtils;
 
-# AUTHOR
+# AUTHORITY
 # DATE
 # DIST
 # VERSION
